@@ -7,10 +7,12 @@ import (
 	"testing"
 	"time"
 
+	ds "github.com/daotl/go-datastore"
+	"github.com/daotl/go-datastore/key"
+	dsq "github.com/daotl/go-datastore/query"
+	syncds "github.com/daotl/go-datastore/sync"
 	blocks "github.com/ipfs/go-block-format"
-	ds "github.com/ipfs/go-datastore"
-	dsq "github.com/ipfs/go-datastore/query"
-	syncds "github.com/ipfs/go-datastore/sync"
+	"github.com/stretchr/testify/assert"
 )
 
 func testBloomCached(ctx context.Context, bs Blockstore) (*bloomcache, error) {
@@ -27,7 +29,9 @@ func testBloomCached(ctx context.Context, bs Blockstore) (*bloomcache, error) {
 }
 
 func TestPutManyAddsToBloom(t *testing.T) {
-	bs := NewBlockstore(syncds.MutexWrap(ds.NewMapDatastore()))
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(syncds.MutexWrap(mapds))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -84,14 +88,18 @@ func TestPutManyAddsToBloom(t *testing.T) {
 }
 
 func TestReturnsErrorWhenSizeNegative(t *testing.T) {
-	bs := NewBlockstore(syncds.MutexWrap(ds.NewMapDatastore()))
-	_, err := bloomCached(context.Background(), bs, -1, 1)
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(syncds.MutexWrap(mapds))
+	_, err = bloomCached(context.Background(), bs, -1, 1)
 	if err == nil {
 		t.Fail()
 	}
 }
 func TestHasIsBloomCached(t *testing.T) {
-	cd := &callbackDatastore{f: func() {}, ds: ds.NewMapDatastore()}
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	cd := &callbackDatastore{f: func() {}, ds: mapds}
 	bs := NewBlockstore(syncds.MutexWrap(cd))
 
 	for i := 0; i < 1000; i++ {
@@ -168,33 +176,33 @@ func (c *callbackDatastore) CallF() {
 	c.f()
 }
 
-func (c *callbackDatastore) Put(key ds.Key, value []byte) (err error) {
+func (c *callbackDatastore) Put(k key.Key, value []byte) (err error) {
 	c.CallF()
-	return c.ds.Put(key, value)
+	return c.ds.Put(k, value)
 }
 
-func (c *callbackDatastore) Get(key ds.Key) (value []byte, err error) {
+func (c *callbackDatastore) Get(k key.Key) (value []byte, err error) {
 	c.CallF()
-	return c.ds.Get(key)
+	return c.ds.Get(k)
 }
 
-func (c *callbackDatastore) Has(key ds.Key) (exists bool, err error) {
+func (c *callbackDatastore) Has(k key.Key) (exists bool, err error) {
 	c.CallF()
-	return c.ds.Has(key)
+	return c.ds.Has(k)
 }
 
-func (c *callbackDatastore) GetSize(key ds.Key) (size int, err error) {
+func (c *callbackDatastore) GetSize(k key.Key) (size int, err error) {
 	c.CallF()
-	return c.ds.GetSize(key)
+	return c.ds.GetSize(k)
 }
 
 func (c *callbackDatastore) Close() error {
 	return nil
 }
 
-func (c *callbackDatastore) Delete(key ds.Key) (err error) {
+func (c *callbackDatastore) Delete(k key.Key) (err error) {
 	c.CallF()
-	return c.ds.Delete(key)
+	return c.ds.Delete(k)
 }
 
 func (c *callbackDatastore) Query(q dsq.Query) (dsq.Results, error) {
@@ -202,9 +210,9 @@ func (c *callbackDatastore) Query(q dsq.Query) (dsq.Results, error) {
 	return c.ds.Query(q)
 }
 
-func (c *callbackDatastore) Sync(key ds.Key) error {
+func (c *callbackDatastore) Sync(k key.Key) error {
 	c.CallF()
-	return c.ds.Sync(key)
+	return c.ds.Sync(k)
 }
 
 func (c *callbackDatastore) Batch() (ds.Batch, error) {

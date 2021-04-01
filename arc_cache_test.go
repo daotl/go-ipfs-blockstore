@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 
+	ds "github.com/daotl/go-datastore"
+	"github.com/daotl/go-datastore/key"
+	syncds "github.com/daotl/go-datastore/sync"
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
-	ds "github.com/ipfs/go-datastore"
-	syncds "github.com/ipfs/go-datastore/sync"
+	"github.com/stretchr/testify/assert"
 )
 
 var exampleBlock = blocks.NewBlock([]byte("foo"))
@@ -27,7 +29,9 @@ func testArcCached(ctx context.Context, bs Blockstore) (*arccache, error) {
 }
 
 func createStores(t *testing.T) (*arccache, Blockstore, *callbackDatastore) {
-	cd := &callbackDatastore{f: func() {}, ds: ds.NewMapDatastore()}
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	cd := &callbackDatastore{f: func() {}, ds: mapds}
 	bs := NewBlockstore(syncds.MutexWrap(cd))
 	arc, err := testArcCached(context.TODO(), bs)
 	if err != nil {

@@ -8,12 +8,13 @@ import (
 	"sync"
 	"sync/atomic"
 
+	ds "github.com/daotl/go-datastore"
+	"github.com/daotl/go-datastore/key"
+	dsns "github.com/daotl/go-datastore/namespace"
+	dsq "github.com/daotl/go-datastore/query"
+	dshelp "github.com/daotl/go-ipfs-ds-help"
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
-	ds "github.com/ipfs/go-datastore"
-	dsns "github.com/ipfs/go-datastore/namespace"
-	dsq "github.com/ipfs/go-datastore/query"
-	dshelp "github.com/ipfs/go-ipfs-ds-help"
 	logging "github.com/ipfs/go-log"
 	uatomic "go.uber.org/atomic"
 )
@@ -21,7 +22,7 @@ import (
 var log = logging.Logger("blockstore")
 
 // BlockPrefix namespaces blockstore datastores
-var BlockPrefix = ds.NewKey("blocks")
+var BlockPrefix = key.NewStrKey("blocks")
 
 // ErrHashMismatch is an error returned when the hash of a block
 // is different than expected.
@@ -136,7 +137,7 @@ func (bs *blockstore) Get(k cid.Cid) (blocks.Block, error) {
 		log.Error("undefined cid in blockstore")
 		return nil, ErrNotFound
 	}
-	bdata, err := bs.datastore.Get(dshelp.MultihashToDsKey(k.Hash()))
+	bdata, err := bs.datastore.Get(dshelp.MultihashToStrKey(k.Hash()))
 	if err == ds.ErrNotFound {
 		return nil, ErrNotFound
 	}
@@ -159,7 +160,7 @@ func (bs *blockstore) Get(k cid.Cid) (blocks.Block, error) {
 }
 
 func (bs *blockstore) Put(block blocks.Block) error {
-	k := dshelp.MultihashToDsKey(block.Cid().Hash())
+	k := dshelp.MultihashToStrKey(block.Cid().Hash())
 
 	// Has is cheaper than Put, so see if we already have it
 	exists, err := bs.datastore.Has(k)
@@ -175,7 +176,7 @@ func (bs *blockstore) PutMany(blocks []blocks.Block) error {
 		return err
 	}
 	for _, b := range blocks {
-		k := dshelp.MultihashToDsKey(b.Cid().Hash())
+		k := dshelp.MultihashToStrKey(b.Cid().Hash())
 		exists, err := bs.datastore.Has(k)
 		if err == nil && exists {
 			continue
@@ -190,11 +191,11 @@ func (bs *blockstore) PutMany(blocks []blocks.Block) error {
 }
 
 func (bs *blockstore) Has(k cid.Cid) (bool, error) {
-	return bs.datastore.Has(dshelp.MultihashToDsKey(k.Hash()))
+	return bs.datastore.Has(dshelp.MultihashToStrKey(k.Hash()))
 }
 
 func (bs *blockstore) GetSize(k cid.Cid) (int, error) {
-	size, err := bs.datastore.GetSize(dshelp.MultihashToDsKey(k.Hash()))
+	size, err := bs.datastore.GetSize(dshelp.MultihashToStrKey(k.Hash()))
 	if err == ds.ErrNotFound {
 		return -1, ErrNotFound
 	}
@@ -202,7 +203,7 @@ func (bs *blockstore) GetSize(k cid.Cid) (int, error) {
 }
 
 func (bs *blockstore) DeleteBlock(k cid.Cid) error {
-	return bs.datastore.Delete(dshelp.MultihashToDsKey(k.Hash()))
+	return bs.datastore.Delete(dshelp.MultihashToStrKey(k.Hash()))
 }
 
 // AllKeysChan runs a query for keys from the blockstore.
@@ -236,7 +237,7 @@ func (bs *blockstore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, error) {
 			}
 
 			// need to convert to key.Key using key.KeyFromDsKey.
-			bk, err := dshelp.BinaryFromDsKey(ds.RawKey(e.Key))
+			bk, err := dshelp.BinaryFromDsKey(e.Key)
 			if err != nil {
 				log.Warningf("error parsing key from binary: %s", err)
 				continue

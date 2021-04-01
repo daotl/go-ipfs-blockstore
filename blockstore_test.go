@@ -6,16 +6,20 @@ import (
 	"fmt"
 	"testing"
 
+	ds "github.com/daotl/go-datastore"
+	"github.com/daotl/go-datastore/key"
+	dsq "github.com/daotl/go-datastore/query"
+	ds_sync "github.com/daotl/go-datastore/sync"
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
-	ds "github.com/ipfs/go-datastore"
-	dsq "github.com/ipfs/go-datastore/query"
-	ds_sync "github.com/ipfs/go-datastore/sync"
 	u "github.com/ipfs/go-ipfs-util"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetWhenKeyNotPresent(t *testing.T) {
-	bs := NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	c := cid.NewCidV0(u.Hash([]byte("stuff")))
 	bl, err := bs.Get(c)
 
@@ -28,18 +32,22 @@ func TestGetWhenKeyNotPresent(t *testing.T) {
 }
 
 func TestGetWhenKeyIsNil(t *testing.T) {
-	bs := NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
-	_, err := bs.Get(cid.Cid{})
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
+	_, err = bs.Get(cid.Cid{})
 	if err != ErrNotFound {
 		t.Fail()
 	}
 }
 
 func TestPutThenGetBlock(t *testing.T) {
-	bs := NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 
-	err := bs.Put(block)
+	err = bs.Put(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +62,12 @@ func TestPutThenGetBlock(t *testing.T) {
 }
 
 func TestCidv0v1(t *testing.T) {
-	bs := NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 
-	err := bs.Put(block)
+	err = bs.Put(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,12 +82,14 @@ func TestCidv0v1(t *testing.T) {
 }
 
 func TestPutThenGetSizeBlock(t *testing.T) {
-	bs := NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 	missingBlock := blocks.NewBlock([]byte("missingBlock"))
 	emptyBlock := blocks.NewBlock([]byte{})
 
-	err := bs.Put(block)
+	err = bs.Put(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,19 +121,21 @@ type countHasDS struct {
 	hasCount int
 }
 
-func (ds *countHasDS) Has(key ds.Key) (exists bool, err error) {
+func (ds *countHasDS) Has(k key.Key) (exists bool, err error) {
 	ds.hasCount += 1
-	return ds.Datastore.Has(key)
+	return ds.Datastore.Has(k)
 }
 
 func TestPutUsesHas(t *testing.T) {
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
 	// Some datastores rely on the implementation detail that Put checks Has
 	// first, to avoid overriding existing objects' metadata. This test ensures
 	// that Blockstore continues to behave this way.
-	// Please ping https://github.com/ipfs/go-ipfs-blockstore/pull/47 if this
+	// Please ping https://github.com/daotl/go-ipfs-blockstore/pull/47 if this
 	// behavior is being removed.
 	ds := &countHasDS{
-		Datastore: ds.NewMapDatastore(),
+		Datastore: mapds,
 	}
 	bs := NewBlockstore(ds_sync.MutexWrap(ds))
 	bl := blocks.NewBlock([]byte("some data"))
@@ -143,7 +157,9 @@ func TestHashOnRead(t *testing.T) {
 	})()
 	u.Debug = false
 
-	bs := NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	bl := blocks.NewBlock([]byte("some data"))
 	blBad, err := blocks.NewBlockWithCid([]byte("some other data"), bl.Cid())
 	if err != nil {
@@ -165,7 +181,9 @@ func TestHashOnRead(t *testing.T) {
 
 func newBlockStoreWithKeys(t *testing.T, d ds.Datastore, N int) (Blockstore, []cid.Cid) {
 	if d == nil {
-		d = ds.NewMapDatastore()
+		mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+		assert.NoError(t, err)
+		d = mapds
 	}
 	bs := NewBlockstore(ds_sync.MutexWrap(d))
 
@@ -209,7 +227,9 @@ func TestAllKeysSimple(t *testing.T) {
 func TestAllKeysRespectsContext(t *testing.T) {
 	N := 100
 
-	d := &queryTestDS{ds: ds.NewMapDatastore()}
+	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
+	assert.NoError(t, err)
+	d := &queryTestDS{ds: mapds}
 	bs, _ := newBlockStoreWithKeys(t, d, N)
 
 	started := make(chan struct{}, 1)
@@ -251,7 +271,7 @@ func TestAllKeysRespectsContext(t *testing.T) {
 	default:
 	}
 
-	e := dsq.Entry{Key: BlockPrefix.ChildString("foo").String()}
+	e := dsq.Entry{Key: BlockPrefix.ChildString("foo")}
 	resultChan <- dsq.Result{Entry: e} // let it go.
 	close(resultChan)
 	<-done                       // should be done now.
@@ -293,24 +313,24 @@ type queryTestDS struct {
 
 func (c *queryTestDS) SetFunc(f func(dsq.Query) (dsq.Results, error)) { c.cb = f }
 
-func (c *queryTestDS) Put(key ds.Key, value []byte) (err error) {
-	return c.ds.Put(key, value)
+func (c *queryTestDS) Put(k key.Key, value []byte) (err error) {
+	return c.ds.Put(k, value)
 }
 
-func (c *queryTestDS) Get(key ds.Key) (value []byte, err error) {
-	return c.ds.Get(key)
+func (c *queryTestDS) Get(k key.Key) (value []byte, err error) {
+	return c.ds.Get(k)
 }
 
-func (c *queryTestDS) Has(key ds.Key) (exists bool, err error) {
-	return c.ds.Has(key)
+func (c *queryTestDS) Has(k key.Key) (exists bool, err error) {
+	return c.ds.Has(k)
 }
 
-func (c *queryTestDS) GetSize(key ds.Key) (size int, err error) {
-	return c.ds.GetSize(key)
+func (c *queryTestDS) GetSize(k key.Key) (size int, err error) {
+	return c.ds.GetSize(k)
 }
 
-func (c *queryTestDS) Delete(key ds.Key) (err error) {
-	return c.ds.Delete(key)
+func (c *queryTestDS) Delete(k key.Key) (err error) {
+	return c.ds.Delete(k)
 }
 
 func (c *queryTestDS) Query(q dsq.Query) (dsq.Results, error) {
@@ -320,8 +340,8 @@ func (c *queryTestDS) Query(q dsq.Query) (dsq.Results, error) {
 	return c.ds.Query(q)
 }
 
-func (c *queryTestDS) Sync(key ds.Key) error {
-	return c.ds.Sync(key)
+func (c *queryTestDS) Sync(k key.Key) error {
+	return c.ds.Sync(k)
 }
 
 func (c *queryTestDS) Batch() (ds.Batch, error) {

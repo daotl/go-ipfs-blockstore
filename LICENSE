@@ -1,6 +1,8 @@
 MIT License
 
-Copyright (c) 2020 Protocol Labs
+Copyright for portions of this fork are held by [Protocol Labs, 2020] as part
+of the original go-ipfs-blockstore project. All other copyright for this fork
+are held by [DAOT Labs, 2021]. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
