@@ -1,6 +1,6 @@
 # go-ipfs-blockstore
 
-DAOT Labs's fork of [ipfs/go-ipfs-blockstore](https://github.com/ipfs/go-ipfs-blockstore).
+DAOT Labs' fork of [ipfs/go-ipfs-blockstore](https://github.com/ipfs/go-ipfs-blockstore).
 
 [![](https://img.shields.io/badge/made%20by-Protocol%20Labs-blue.svg?style=flat-square)](http://ipn.io)
 [![](https://img.shields.io/badge/project-DAOT%20Labs-red.svg?style=flat-square)](http://github.com/daotl)
