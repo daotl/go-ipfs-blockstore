@@ -1,6 +1,6 @@
 module github.com/daotl/go-ipfs-blockstore
 
-go 1.13
+go 1.15
 
 require (
 	github.com/daotl/go-datastore v0.4.8
