@@ -11,14 +11,14 @@ import (
 	dsq "github.com/daotl/go-datastore/query"
 	ds_sync "github.com/daotl/go-datastore/sync"
 	blocks "github.com/ipfs/go-block-format"
-	cid "github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cid"
 	u "github.com/ipfs/go-ipfs-util"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetWhenKeyNotPresent(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	c := cid.NewCidV0(u.Hash([]byte("stuff")))
 	bl, err := bs.Get(c)
@@ -33,7 +33,7 @@ func TestGetWhenKeyNotPresent(t *testing.T) {
 
 func TestGetWhenKeyIsNil(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	_, err = bs.Get(cid.Cid{})
 	if err != ErrNotFound {
@@ -43,7 +43,7 @@ func TestGetWhenKeyIsNil(t *testing.T) {
 
 func TestPutThenGetBlock(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 
@@ -63,7 +63,7 @@ func TestPutThenGetBlock(t *testing.T) {
 
 func TestCidv0v1(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 
@@ -83,7 +83,7 @@ func TestCidv0v1(t *testing.T) {
 
 func TestPutThenGetSizeBlock(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 	missingBlock := blocks.NewBlock([]byte("missingBlock"))
@@ -128,7 +128,7 @@ func (ds *countHasDS) Has(k key.Key) (exists bool, err error) {
 
 func TestPutUsesHas(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Some datastores rely on the implementation detail that Put checks Has
 	// first, to avoid overriding existing objects' metadata. This test ensures
 	// that Blockstore continues to behave this way.
@@ -158,7 +158,7 @@ func TestHashOnRead(t *testing.T) {
 	u.Debug = false
 
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	bl := blocks.NewBlock([]byte("some data"))
 	blBad, err := blocks.NewBlockWithCid([]byte("some other data"), bl.Cid())
@@ -182,7 +182,7 @@ func TestHashOnRead(t *testing.T) {
 func newBlockStoreWithKeys(t *testing.T, d ds.Datastore, N int) (Blockstore, []cid.Cid) {
 	if d == nil {
 		mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		d = mapds
 	}
 	bs := NewBlockstore(ds_sync.MutexWrap(d))
@@ -228,7 +228,7 @@ func TestAllKeysRespectsContext(t *testing.T) {
 	N := 100
 
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	d := &queryTestDS{ds: mapds}
 	bs, _ := newBlockStoreWithKeys(t, d, N)
 

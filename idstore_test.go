@@ -7,14 +7,14 @@ import (
 	ds "github.com/daotl/go-datastore"
 	"github.com/daotl/go-datastore/key"
 	blk "github.com/ipfs/go-block-format"
-	cid "github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func createTestStores(t *testing.T) (Blockstore, *callbackDatastore) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cd := &callbackDatastore{f: func() {}, ds: mapds}
 	ids := NewIdStore(NewBlockstore(cd))
 	return ids, cd

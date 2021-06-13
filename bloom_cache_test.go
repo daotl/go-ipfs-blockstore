@@ -12,7 +12,7 @@ import (
 	dsq "github.com/daotl/go-datastore/query"
 	syncds "github.com/daotl/go-datastore/sync"
 	blocks "github.com/ipfs/go-block-format"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testBloomCached(ctx context.Context, bs Blockstore) (*bloomcache, error) {
@@ -30,7 +30,7 @@ func testBloomCached(ctx context.Context, bs Blockstore) (*bloomcache, error) {
 
 func TestPutManyAddsToBloom(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(syncds.MutexWrap(mapds))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -89,7 +89,7 @@ func TestPutManyAddsToBloom(t *testing.T) {
 
 func TestReturnsErrorWhenSizeNegative(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bs := NewBlockstore(syncds.MutexWrap(mapds))
 	_, err = bloomCached(context.Background(), bs, -1, 1)
 	if err == nil {
@@ -98,7 +98,7 @@ func TestReturnsErrorWhenSizeNegative(t *testing.T) {
 }
 func TestHasIsBloomCached(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cd := &callbackDatastore{f: func() {}, ds: mapds}
 	bs := NewBlockstore(syncds.MutexWrap(cd))
 

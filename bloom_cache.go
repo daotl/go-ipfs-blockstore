@@ -8,7 +8,7 @@ import (
 
 	bloom "github.com/ipfs/bbloom"
 	blocks "github.com/ipfs/go-block-format"
-	cid "github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cid"
 	metrics "github.com/ipfs/go-metrics-interface"
 )
 
