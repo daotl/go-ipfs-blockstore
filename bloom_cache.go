@@ -9,7 +9,7 @@ import (
 	bloom "github.com/ipfs/bbloom"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	metrics "github.com/ipfs/go-metrics-interface"
+	"github.com/ipfs/go-metrics-interface"
 )
 
 // bloomCached returns a Blockstore that caches Has requests using a Bloom
@@ -94,8 +94,8 @@ func (b *bloomcache) Wait(ctx context.Context) error {
 }
 
 func (b *bloomcache) build(ctx context.Context) error {
-	evt := log.EventBegin(ctx, "bloomcache.build")
-	defer evt.Done()
+	log.Info("bloomcache.build begins")
+	defer log.Info("bloomcache.build done")
 	defer close(b.buildChan)
 
 	ch, err := b.blockstore.AllKeysChan(ctx)

@@ -13,9 +13,9 @@ import (
 	dsns "github.com/daotl/go-datastore/namespace"
 	dsq "github.com/daotl/go-datastore/query"
 	dshelp "github.com/daotl/go-ipfs-ds-help"
+	logging "github.com/daotl/go-log/v2"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	logging "github.com/ipfs/go-log"
 	uatomic "go.uber.org/atomic"
 )
 
