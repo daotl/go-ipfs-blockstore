@@ -13,6 +13,8 @@ import (
 	dsns "github.com/daotl/go-datastore/namespace"
 	dsq "github.com/daotl/go-datastore/query"
 	dshelp "github.com/daotl/go-ipfs-ds-help"
+	channel "github.com/daotl/go-ipld-channel"
+	"github.com/daotl/go-ipld-channel/pair"
 	logging "github.com/daotl/go-log/v2"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
@@ -56,6 +58,24 @@ type Blockstore interface {
 	// HashOnRead specifies if every read block should be
 	// rehashed to make sure it matches its CID.
 	HashOnRead(enabled bool)
+}
+
+// BlockstoreForChannel extends Blockstore with channel support
+type BlockstoreForChannel interface {
+	Blockstore
+	DeleteBlockForChannel(cid.Cid, channel.Channel) error
+	HasForChannel(cid.Cid, channel.Channel) (bool, error)
+
+	GetForChannel(cid.Cid, channel.Channel) (blocks.Block, error)
+	GetSizeForChannel(cid.Cid, channel.Channel) (int, error)
+	PutForChannel(blocks.Block, channel.Channel) error
+
+	// AllPairsChan returns a channel from which
+	// the pairs in the store can be read. It should respect
+	// the given context, closing the channel if it becomes Done.
+	AllPairsChan(ctx context.Context) (<-chan pair.CidChannelPair, error)
+
+	// TODO: PutManyForChannel. how to pass block with channel?
 }
 
 // Viewer can be implemented by blockstores that offer zero-copy access to
