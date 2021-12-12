@@ -16,12 +16,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var bg = context.Background()
+
 func TestGetWhenKeyNotPresent(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
 	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	c := cid.NewCidV0(u.Hash([]byte("stuff")))
-	bl, err := bs.Get(c)
+	bl, err := bs.Get(bg, c)
 
 	if bl != nil {
 		t.Error("nil block expected")
@@ -35,7 +37,7 @@ func TestGetWhenKeyIsNil(t *testing.T) {
 	mapds, err := ds.NewMapDatastore(key.KeyTypeString)
 	require.NoError(t, err)
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
-	_, err = bs.Get(cid.Cid{})
+	_, err = bs.Get(bg, cid.Cid{})
 	if err != ErrNotFound {
 		t.Fail()
 	}
@@ -47,12 +49,12 @@ func TestPutThenGetBlock(t *testing.T) {
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 
-	err = bs.Put(block)
+	err = bs.Put(bg, block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	blockFromBlockstore, err := bs.Get(block.Cid())
+	blockFromBlockstore, err := bs.Get(bg, block.Cid())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,12 +69,12 @@ func TestCidv0v1(t *testing.T) {
 	bs := NewBlockstore(ds_sync.MutexWrap(mapds))
 	block := blocks.NewBlock([]byte("some data"))
 
-	err = bs.Put(block)
+	err = bs.Put(bg, block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	blockFromBlockstore, err := bs.Get(cid.NewCidV1(cid.DagProtobuf, block.Cid().Hash()))
+	blockFromBlockstore, err := bs.Get(bg, cid.NewCidV1(cid.DagProtobuf, block.Cid().Hash()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,12 +91,12 @@ func TestPutThenGetSizeBlock(t *testing.T) {
 	missingBlock := blocks.NewBlock([]byte("missingBlock"))
 	emptyBlock := blocks.NewBlock([]byte{})
 
-	err = bs.Put(block)
+	err = bs.Put(bg, block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	blockSize, err := bs.GetSize(block.Cid())
+	blockSize, err := bs.GetSize(bg, block.Cid())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,16 +104,16 @@ func TestPutThenGetSizeBlock(t *testing.T) {
 		t.Fail()
 	}
 
-	err = bs.Put(emptyBlock)
+	err = bs.Put(bg, emptyBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if blockSize, err := bs.GetSize(emptyBlock.Cid()); blockSize != 0 || err != nil {
+	if blockSize, err := bs.GetSize(bg, emptyBlock.Cid()); blockSize != 0 || err != nil {
 		t.Fatal(err)
 	}
 
-	if blockSize, err := bs.GetSize(missingBlock.Cid()); blockSize != -1 || err == nil {
+	if blockSize, err := bs.GetSize(bg, missingBlock.Cid()); blockSize != -1 || err == nil {
 		t.Fatal("getsize returned invalid result")
 	}
 }
@@ -121,9 +123,9 @@ type countHasDS struct {
 	hasCount int
 }
 
-func (ds *countHasDS) Has(k key.Key) (exists bool, err error) {
+func (ds *countHasDS) Has(ctx context.Context, k key.Key) (exists bool, err error) {
 	ds.hasCount += 1
-	return ds.Datastore.Has(k)
+	return ds.Datastore.Has(ctx, k)
 }
 
 func TestPutUsesHas(t *testing.T) {
@@ -139,10 +141,10 @@ func TestPutUsesHas(t *testing.T) {
 	}
 	bs := NewBlockstore(ds_sync.MutexWrap(ds))
 	bl := blocks.NewBlock([]byte("some data"))
-	if err := bs.Put(bl); err != nil {
+	if err := bs.Put(bg, bl); err != nil {
 		t.Fatal(err)
 	}
-	if err := bs.Put(bl); err != nil {
+	if err := bs.Put(bg, bl); err != nil {
 		t.Fatal(err)
 	}
 	if ds.hasCount != 2 {
@@ -166,15 +168,15 @@ func TestHashOnRead(t *testing.T) {
 		t.Fatal("debug is off, still got an error")
 	}
 	bl2 := blocks.NewBlock([]byte("some other data"))
-	bs.Put(blBad)
-	bs.Put(bl2)
+	bs.Put(bg, blBad)
+	bs.Put(bg, bl2)
 	bs.HashOnRead(true)
 
-	if _, err := bs.Get(bl.Cid()); err != ErrHashMismatch {
+	if _, err := bs.Get(bg, bl.Cid()); err != ErrHashMismatch {
 		t.Fatalf("expected '%v' got '%v'\n", ErrHashMismatch, err)
 	}
 
-	if b, err := bs.Get(bl2.Cid()); err != nil || b.String() != bl2.String() {
+	if b, err := bs.Get(bg, bl2.Cid()); err != nil || b.String() != bl2.String() {
 		t.Fatal("got wrong blocks")
 	}
 }
@@ -190,7 +192,7 @@ func newBlockStoreWithKeys(t *testing.T, d ds.Datastore, N int) (Blockstore, []c
 	keys := make([]cid.Cid, N)
 	for i := 0; i < N; i++ {
 		block := blocks.NewBlock([]byte(fmt.Sprintf("some data %d", i)))
-		err := bs.Put(block)
+		err := bs.Put(bg, block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -313,38 +315,38 @@ type queryTestDS struct {
 
 func (c *queryTestDS) SetFunc(f func(dsq.Query) (dsq.Results, error)) { c.cb = f }
 
-func (c *queryTestDS) Put(k key.Key, value []byte) (err error) {
-	return c.ds.Put(k, value)
+func (c *queryTestDS) Put(ctx context.Context, k key.Key, value []byte) (err error) {
+	return c.ds.Put(ctx, k, value)
 }
 
-func (c *queryTestDS) Get(k key.Key) (value []byte, err error) {
-	return c.ds.Get(k)
+func (c *queryTestDS) Get(ctx context.Context, k key.Key) (value []byte, err error) {
+	return c.ds.Get(ctx, k)
 }
 
-func (c *queryTestDS) Has(k key.Key) (exists bool, err error) {
-	return c.ds.Has(k)
+func (c *queryTestDS) Has(ctx context.Context, k key.Key) (exists bool, err error) {
+	return c.ds.Has(ctx, k)
 }
 
-func (c *queryTestDS) GetSize(k key.Key) (size int, err error) {
-	return c.ds.GetSize(k)
+func (c *queryTestDS) GetSize(ctx context.Context, k key.Key) (size int, err error) {
+	return c.ds.GetSize(ctx, k)
 }
 
-func (c *queryTestDS) Delete(k key.Key) (err error) {
-	return c.ds.Delete(k)
+func (c *queryTestDS) Delete(ctx context.Context, k key.Key) (err error) {
+	return c.ds.Delete(ctx, k)
 }
 
-func (c *queryTestDS) Query(q dsq.Query) (dsq.Results, error) {
+func (c *queryTestDS) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
 	if c.cb != nil {
 		return c.cb(q)
 	}
-	return c.ds.Query(q)
+	return c.ds.Query(ctx, q)
 }
 
-func (c *queryTestDS) Sync(k key.Key) error {
-	return c.ds.Sync(k)
+func (c *queryTestDS) Sync(ctx context.Context, k key.Key) error {
+	return c.ds.Sync(ctx, k)
 }
 
-func (c *queryTestDS) Batch() (ds.Batch, error) {
+func (c *queryTestDS) Batch(_ context.Context) (ds.Batch, error) {
 	return ds.NewBasicBatch(c), nil
 }
 func (c *queryTestDS) Close() error {
